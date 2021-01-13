@@ -36,7 +36,6 @@ public class DNSRecursiveServer {
             }
 
             DNSQuery dnsQuery = new DNSQuery(receiveDataBuffer);
-
             // String sentence = new String(Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength()));
             // System.out.println("RECEIVED: " + sentence);
             // InetAddress IPAddress = receivePacket.getAddress();
