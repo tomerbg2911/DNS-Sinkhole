@@ -35,7 +35,7 @@ public class DNSRecursiveServer {
                 System.err.printf("Error occurred while trying to recieve a DatagramPacket");
             }
 
-            System.out.println(receiveDataBuffer);
+            DNSQuery dnsQuery = new DNSQuery(receiveDataBuffer);
 
             // String sentence = new String(Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength()));
             // System.out.println("RECEIVED: " + sentence);
