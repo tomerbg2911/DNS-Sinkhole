@@ -18,46 +18,55 @@ public class DNSQuery {
     private Question question;
 
     // section sizes
-    private int headerSize = 12;
-    private int questionSize;
+    private final int headerSize = 12;
+    private final int questionTypeSize = 2;
+    private final int questionClassSize = 2;
 
     // current position in bytes arry
-    private int bytesArryCursor = 0;
-    
+    private int bytesArrayCursor = 0;
 
     public DNSQuery(byte[] dnsQueryBytes) {
         this.dnsQueryBytes = dnsQueryBytes;
         showBytesAsBits(dnsQueryBytes);
+        
+        // read Header section
         initFlags();
         initCounters();
+        this.bytesArrayCursor += headerSize;
 
-        System.out.println(readMsgFromByte(12));
-
+        // read Question section
+        String questionName = readMsgFromByte(this.bytesArrayCursor, true);
+        byte[] questionTypeBytes = { dnsQueryBytes[this.bytesArrayCursor], dnsQueryBytes[this.bytesArrayCursor + 1] };
+        int questionType = getNumberFromBytesArray(questionTypeBytes);
+        this.bytesArrayCursor += 2;
+        this.question = new Question(questionName, questionType);
+        int a = 5;
     }
 
     private void initRRs() {
-        
 
     }
 
-    private String readMsgFromByte(int byteIdx) {
+    private String readMsgFromByte(int startingByteIdx, boolean advanceCursor) {
 
         StringBuilder result = new StringBuilder();
 
-        int currentByteIdx = byteIdx;
+        int currentByteIdx = startingByteIdx;
         int bytesToRead = dnsQueryBytes[currentByteIdx];
 
         while (dnsQueryBytes[currentByteIdx] != 0) {
 
-            boolean isPointer = !(getBitsSeqFromByte(this.dnsQueryBytes[byteIdx], 0, 2) == 0); // check if this byte
-                                                                                               // represnts a pointer
-                                                                                               // from
-                                                                                               // first 2 bits
+            boolean isPointer = !(getBitsSeqFromByte(this.dnsQueryBytes[currentByteIdx], 0, 2) == 0); // check if this
+                                                                                                      // byte
+                                                                                                      // represnts a pointer
+                                                                                                      // from
+                                                                                                      // first 2 bits
             if (isPointer) {
                 byte[] pointerBytes = { dnsQueryBytes[currentByteIdx], dnsQueryBytes[currentByteIdx + 1] };
                 pointerBytes[0] &= 0x3f;
                 int pointerByteIdx = getNumberFromBytesArray(pointerBytes);
-                result.append(readMsgFromByte(pointerByteIdx));
+                result.append(readMsgFromByte(pointerByteIdx, false));
+                currentByteIdx += 2;
             } else {
                 bytesToRead = dnsQueryBytes[currentByteIdx];
                 currentByteIdx++;
@@ -71,6 +80,10 @@ public class DNSQuery {
                     result.append('.');
                 }
             }
+        }
+        
+        if (advanceCursor) {
+            this.bytesArrayCursor += currentByteIdx - startingByteIdx;
         }
 
         return result.toString();
