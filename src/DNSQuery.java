@@ -17,6 +17,14 @@ public class DNSQuery {
     // RRs
     private Question question;
 
+    // section sizes
+    private int headerSize = 12;
+    private int questionSize;
+
+    // current position in bytes arry
+    private int bytesArryCursor = 0;
+    
+
     public DNSQuery(byte[] dnsQueryBytes) {
         this.dnsQueryBytes = dnsQueryBytes;
         showBytesAsBits(dnsQueryBytes);
