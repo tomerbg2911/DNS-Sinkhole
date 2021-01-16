@@ -1,6 +1,7 @@
 
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
 import java.util.Random;
 
 public class DNSRecursiveServer {
@@ -29,6 +30,8 @@ public class DNSRecursiveServer {
 
         // server's loop
         while (true) {
+
+            // receive a msg from a new client
             DatagramPacket receivePacketFromClient = new DatagramPacket(receiveDataBuffer, receiveDataBuffer.length);
             try {
                 this.serverSocket.receive(receivePacketFromClient);
@@ -40,20 +43,25 @@ public class DNSRecursiveServer {
             InetAddress IPAddress = receivePacketFromClient.getAddress();
             int port = receivePacketFromClient.getPort();
 
-            //
-            DNSQuery clientDNSQuery = new DNSQuery(receiveDataBuffer);
-            // clientDNSQuery.setFlag("RD", 0);
+            // init a new DNSQuery object for the client's request
+            int receivedDataLength = receivePacketFromClient.getLength();
+            DNSQuery clientDNSQuery = new DNSQuery(cutBytesBuffer(receiveDataBuffer, receivedDataLength));
+            clientDNSQuery.setFlag("RD", 0); // disable Recursive Desired flag
 
-            // retrieve a random dns name-server
+            // retrieve a random root dns name-server
             Random random = new Random();
             char randomRootServer = (char) ((int) 'a' + random.nextInt(13));
             String nameServer = String.format("%c.root-servers.net", randomRootServer);
+            System.out.println(randomRootServer);
 
             while (true) {
                 try {
-                    // send the client's query to the next name server
-                    DatagramPacket sendPacket = new DatagramPacket(clientDNSQuery.dnsQueryBytes, bufferSizeInBytes,
-                            InetAddress.getByName(nameServer), 53);
+                    // clean receive data buffer
+                    receiveDataBuffer = new byte[bufferSizeInBytes];
+
+                    // send the client's query to the next name-server
+                    DatagramPacket sendPacket = new DatagramPacket(clientDNSQuery.dnsQueryBytes,
+                            clientDNSQuery.dnsQueryBytes.length, InetAddress.getByName(nameServer), 53);
                     clientSocket.send(sendPacket);
 
                     // recieve response from the server
@@ -61,33 +69,42 @@ public class DNSRecursiveServer {
                             receiveDataBuffer.length);
                     this.clientSocket.receive(receivePacketFromServer);
 
-                    DNSQuery responseDNSQuery = new DNSQuery(receiveDataBuffer);
-                    int a = 5;
+                    // init a new DNSQuery object for the response
+                    receivedDataLength = receivePacketFromServer.getLength();
+                    DNSQuery responseDNSQuery = new DNSQuery(cutBytesBuffer(receiveDataBuffer, receivedDataLength));
 
+                    if (responseDNSQuery.getAnswersCounter() > 0) {
+                        responseDNSQuery.setFlag("AA", 0);
+                        responseDNSQuery.setFlag("RA", 1);
+                        sendDNSQuery(responseDNSQuery, IPAddress, port);
+                        System.out.println("response sent!");
+                        break;
+                    }
 
+                    else if (responseDNSQuery.getAuthorativeCounter() > 0) {
+                        // randomally choose NS to be the next server
+                        int randomNS = random.nextInt(responseDNSQuery.getAuthorativeCounter());
+                        ResourceRecord rr = responseDNSQuery.getAuthoratyRR(randomNS);
+                        nameServer = rr.getRDData();
+                    }
 
-
+                // TODO: make this more informative
                 } catch (UnknownHostException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    System.err.printf("an UnknownHostException occured");
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    System.err.printf("an IOException occured");
                 }
             }
-
-            // String sentence = new String(Arrays.copyOfRange(receivePacket.getData(), 0,
-            // receivePacket.getLength()));
-            // System.out.println("RECEIVED: " + sentence);
-            // InetAddress IPAddress = receivePacket.getAddress();
-            // int port = receivePacket.getPort();
-            // String capitalizedSentence = sentence.toUpperCase();
-
-            // sendDataBuffer = capitalizedSentence.getBytes();
-
-            // DatagramPacket sendPacket =
-            // new DatagramPacket(sendDataBuffer, sendDataBuffer.length, IPAddress, port);
-            // serverSocket.send(sendPacket);
         }
+    }
+
+    private void sendDNSQuery(DNSQuery dnsQuery, InetAddress IPAddress, int port) throws IOException {
+        DatagramPacket sendPacket = new DatagramPacket(dnsQuery.dnsQueryBytes, dnsQuery.dnsQueryBytes.length, IPAddress,
+                port);
+        serverSocket.send(sendPacket);
+    }
+
+    private byte[] cutBytesBuffer(byte[] buffer, int dataLength) {
+        return Arrays.copyOfRange(buffer, 0, dataLength + 1);
     }
 }
