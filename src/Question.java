@@ -8,4 +8,8 @@ public class Question {
         this.name = name;
         this.type = type;
     }
+
+    public String name() {
+        return this.name;
+    }
 }

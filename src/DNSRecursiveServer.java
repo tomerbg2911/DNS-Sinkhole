@@ -15,14 +15,22 @@ public class DNSRecursiveServer {
     // class members
     private DatagramSocket clientSocket;
     private DatagramSocket serverSocket;
+    private BlockListFilter blockListFilter;
 
     public DNSRecursiveServer() {
         try {
             this.clientSocket = new DatagramSocket();
             this.serverSocket = new DatagramSocket(serverPortNumber);
         } catch (SocketException e) {
-            System.err.printf("Error occurred while trying to init a DatagramSocket");
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
+        this.blockListFilter = null;
+    }
+
+    public DNSRecursiveServer(String path) {
+        this();
+        this.blockListFilter = new BlockListFilter(path);
     }
 
     public void Run() {
@@ -35,12 +43,27 @@ public class DNSRecursiveServer {
             InetAddress clientIPAddress = clientPacket.getAddress();
             int clientPort = clientPacket.getPort();
 
-            // init iterative process variables
-            String nameServer = getRandomRootServerName(); // retrieve a random root dns name-server
-            int countIterations = 0;
+            // init response related vars
             boolean finalResponseFound = false;
             DNSQuery responseDNSQuery = null;
             DatagramPacket serverPacket = null;
+
+            // checks wether the clients DNS query is not in the blockList
+            DNSQuery clientDNSQuery = new DNSQuery(clientPacket.getData());
+            if (blockListFilter != null) {
+                boolean isValidQuery = blockListFilter.isValidQuery(clientDNSQuery);
+                if (!isValidQuery) {
+                    responseDNSQuery = clientDNSQuery;
+                    serverPacket = clientPacket;
+                    responseDNSQuery.setFlag("RCODE", 3);
+                    responseDNSQuery.setFlag("QR", 1); 
+                    finalResponseFound = true;
+                }
+            }
+
+            // init iterative process variables
+            String nameServer = getRandomRootServerName(); // retrieve a random root dns name-server
+            int countIterations = 0;
             try {
                 while (countIterations < maxNumOfIterations && !finalResponseFound) {
 
@@ -54,9 +77,9 @@ public class DNSRecursiveServer {
                     serverPacket = new DatagramPacket(DataBuffer, bufferSizeInBytes);
                     this.clientSocket.receive(serverPacket);
 
-                    // init a new DNSQuery object from the response data (after removing redundant bytes)
-                    byte[] trimmedData = Arrays.copyOfRange(serverPacket.getData(), 0,
-                            serverPacket.getLength());
+                    // init a new DNSQuery object from the response data (after removing redundant
+                    // bytes)
+                    byte[] trimmedData = Arrays.copyOfRange(serverPacket.getData(), 0, serverPacket.getLength());
                     responseDNSQuery = new DNSQuery(trimmedData);
                     int errorCode = responseDNSQuery.getReturnCodeFlag();
 

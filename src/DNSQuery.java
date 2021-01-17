@@ -160,8 +160,7 @@ public class DNSQuery {
     }
 
     // getters
-    public byte[] getData()
-    {
+    public byte[] getData() {
         return this.dnsQueryBytes;
     }
 
@@ -179,6 +178,10 @@ public class DNSQuery {
 
     public int getReturnCodeFlag() {
         return this.returnCodeFlag;
+    }
+
+    public Question getQuestion() {
+        return this.question;
     }
 
     public ResourceRecord getAnswerRR(int idx) {
@@ -211,6 +214,11 @@ public class DNSQuery {
                 this.authorityAnswerFlag = value;
                 newByte = BytesOperations.setBitsSeqOnByte(this.dnsQueryBytes[2], 5, 1, value);
                 setDnsQueryByte(2, newByte);
+                break;
+            case "RCODE":
+                this.returnCodeFlag = value;
+                newByte = BytesOperations.setBitsSeqOnByte(this.dnsQueryBytes[3], 4, 4, value);
+                setDnsQueryByte(3, newByte);
                 break;
         }
     }
