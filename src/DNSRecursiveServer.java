@@ -6,13 +6,15 @@ import java.util.Random;
 
 public class DNSRecursiveServer {
 
+    // constants
     final int serverPortNumber = 5300;
     final int bufferSizeInBytes = 512;
-    final int dnsPort = 53;
+    final int dnsDefaultPort = 53;
     final int maxNumOfIterations = 16;
 
-    DatagramSocket clientSocket;
-    DatagramSocket serverSocket;
+    // class members
+    private DatagramSocket clientSocket;
+    private DatagramSocket serverSocket;
 
     public DNSRecursiveServer() {
         try {
@@ -24,99 +26,96 @@ public class DNSRecursiveServer {
     }
 
     public void Run() {
-        System.out.println(String.format("DNSRecursiveServer is now listening on port %d", serverPortNumber));
+        String welcomeMsg = String.format("DNSRecursiveServer is now listening on port %d", serverPortNumber);
+        System.out.println(welcomeMsg);
 
         while (true) {
-            // init buffer
-            byte[] receiveDataBuffer = new byte[bufferSizeInBytes];
+            // receive a new client packet and save the IP and port number
+            DatagramPacket clientPacket = receivePacketFromClient();
+            InetAddress clientIPAddress = clientPacket.getAddress();
+            int clientPort = clientPacket.getPort();
 
-            // receive a msg from a new client
-            DatagramPacket receivePacketFromClient = new DatagramPacket(receiveDataBuffer, receiveDataBuffer.length);
-            try {
-                this.serverSocket.receive(receivePacketFromClient);
-            } catch (IOException e) {
-                System.err.printf("Error occurred while trying to recieve a DatagramPacket");
-            }
-
-            // save client's IP and port number
-            InetAddress IPAddress = receivePacketFromClient.getAddress();
-            int port = receivePacketFromClient.getPort();
-
-            // retrieve a random root dns name-server
-            String nameServer = getRandomRootServerName();
-
+            // init iterative process variables
+            String nameServer = getRandomRootServerName(); // retrieve a random root dns name-server
             int countIterations = 0;
-            boolean answerWasFound = false;
-            while (countIterations < maxNumOfIterations && !answerWasFound) {
-                try {
+            boolean finalResponseFound = false;
+            DNSQuery responseDNSQuery = null;
+            DatagramPacket serverPacket = null;
+            try {
+                while (countIterations < maxNumOfIterations && !finalResponseFound) {
+
                     // send the client's query to the next NS
-                    receiveDataBuffer = new byte[bufferSizeInBytes];
-                    receivePacketFromClient.setAddress(InetAddress.getByName(nameServer));
-                    receivePacketFromClient.setPort(dnsPort);
+                    byte[] DataBuffer = new byte[bufferSizeInBytes]; // a new clean buffer
+                    clientPacket.setAddress(InetAddress.getByName(nameServer));
+                    clientPacket.setPort(dnsDefaultPort);
+                    clientSocket.send(clientPacket);
 
-                    clientSocket.send(receivePacketFromClient);
+                    // receive response from the server
+                    serverPacket = new DatagramPacket(DataBuffer, bufferSizeInBytes);
+                    this.clientSocket.receive(serverPacket);
 
-                    // recieve response from the server
-                    DatagramPacket receivePacketFromServer = new DatagramPacket(receiveDataBuffer, bufferSizeInBytes);
-                    this.clientSocket.receive(receivePacketFromServer);
-
-                    // init a new DNSQuery object from the response
-                    DNSQuery responseDNSQuery = new DNSQuery(receivePacketFromServer.getData());
+                    // init a new DNSQuery object from the response data (after removing redundant bytes)
+                    byte[] trimmedData = Arrays.copyOfRange(serverPacket.getData(), 0,
+                            serverPacket.getLength());
+                    responseDNSQuery = new DNSQuery(trimmedData);
                     int errorCode = responseDNSQuery.getReturnCodeFlag();
 
-                    // domain does not exist
+                    // domain name does not exist
                     if (errorCode == 3) {
-                        answerWasFound = true;
-                        responseDNSQuery.setFlag("AA", 0);
-                        responseDNSQuery.setFlag("RA", 1);
-                        sendDNSQuery(responseDNSQuery, IPAddress, port);
-                        System.out.println("response sent!");
+                        finalResponseFound = true;
                     }
 
+                    // no error condition
                     else if (errorCode == 0) {
                         // check if the response includes a final answer
                         if (responseDNSQuery.getAnswersCounter() > 0) {
-                            answerWasFound = true;
-                            responseDNSQuery.setFlag("AA", 0);
-                            responseDNSQuery.setFlag("RA", 1);
-                            sendDNSQuery(responseDNSQuery, IPAddress, port);
-                            System.out.println("response sent!");
+                            finalResponseFound = true;
                         }
 
-                        // check if the response includes authorative answers
+                        // check if the response includes authoritative answers
                         else if (responseDNSQuery.getAuthorativeCounter() > 0) {
                             ResourceRecord rr = responseDNSQuery.getAuthoratyRR(0); // get the first entity on AUTHORITY
                                                                                     // section
                             nameServer = rr.getRDData();
                         }
                     }
-
-                    else {
-                        // delete thissss
-                        System.out.println(errorCode);
-                    }
-
-                // TODO: make this more informative
-                } catch (UnknownHostException e) {
-                    System.err.printf("an UnknownHostException occured");
-                } catch (IOException e) {
-                    System.err.printf("an IOException occured");
-                } finally {
-                    countIterations++;
                 }
+
+                // return final response to the client
+                if (finalResponseFound) {
+                    responseDNSQuery.setFlag("AA", 0);
+                    responseDNSQuery.setFlag("RA", 1);
+                    serverPacket.setData(responseDNSQuery.getData());
+                    serverPacket.setAddress(clientIPAddress);
+                    serverPacket.setPort(clientPort);
+                    serverSocket.send(serverPacket);
+                    System.out.println("response sent!");
+                }
+
+            } catch (UnknownHostException e) {
+                System.err.printf("an Unknown Host Exception occurred during the iterative process");
+            } catch (IOException e) {
+                System.err.printf("IO error occurred during the iterative process");
+            } finally {
+                countIterations++;
             }
         }
+    }
+
+    private DatagramPacket receivePacketFromClient() {
+        byte[] DataBuffer = new byte[bufferSizeInBytes];
+        DatagramPacket ClientPacket = new DatagramPacket(DataBuffer, DataBuffer.length);
+        try {
+            this.serverSocket.receive(ClientPacket);
+        } catch (IOException e) {
+            System.err.printf("IO error occurred while trying to receive a DatagramPacket from client");
+        }
+        return ClientPacket;
     }
 
     private String getRandomRootServerName() {
         Random random = new Random();
         char randomRootServer = (char) ((int) 'a' + random.nextInt(13));
         return String.format("%c.root-servers.net", randomRootServer);
-    }
-
-    private void sendDNSQuery(DNSQuery dnsQuery, InetAddress IPAddress, int port) throws IOException {
-        DatagramPacket sendPacket = new DatagramPacket(dnsQuery.dnsQueryBytes, dnsQuery.dnsQueryBytes.length, IPAddress,
-                port);
-        serverSocket.send(sendPacket);
     }
 }
