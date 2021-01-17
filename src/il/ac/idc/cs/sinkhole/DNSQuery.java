@@ -1,3 +1,4 @@
+package il.ac.idc.cs.sinkhole;
 
 public class DNSQuery {
 
@@ -128,7 +129,7 @@ public class DNSQuery {
             boolean isPointer = !(BytesOperations.getBitsSeqFromByte(this.dnsQueryBytes[currentByteIdx], 0, 2) == 0);
             if (isPointer) {
                 byte[] pointerBytes = { dnsQueryBytes[currentByteIdx], dnsQueryBytes[currentByteIdx + 1] };
-                pointerBytes[0] &= 0x3f; // remove pointer prefix
+                pointerBytes[0] = BytesOperations.setBitsSeqOnByte(pointerBytes[0], 0, 2, 0); // remove pointer prefix
                 int pointerByteIdx = BytesOperations.getNumberFromBytesArray(pointerBytes);
                 result.append(readNameFromByte(pointerByteIdx, false));
                 currentByteIdx += 2;

@@ -1,3 +1,4 @@
+package il.ac.idc.cs.sinkhole;
 
 public class BytesOperations {
     public static int getBitsSeqFromByte(byte inputByte, int position, int amount) {
@@ -20,7 +21,6 @@ public class BytesOperations {
         }
         andMask = andMask << (8 - position - amount);
         // get new byte value
-        // based on value = (value & ~mask) | (newvalue & mask)
         byte newValue = (byte) ((int) inputByte & ~andMask | (value & andMask));
         
         return newValue;

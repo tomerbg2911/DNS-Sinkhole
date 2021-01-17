@@ -1,4 +1,6 @@
-public class entryPoint {
+package il.ac.idc.cs.sinkhole;
+
+public class SinkholeServer {
 
     public static void main(String[] args) {
         DNSRecursiveServer dnsRecursiveServer = null;

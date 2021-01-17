@@ -1,3 +1,5 @@
+package il.ac.idc.cs.sinkhole;
+
 import java.io.*;
 import java.util.HashSet;
 import java.util.Scanner;
