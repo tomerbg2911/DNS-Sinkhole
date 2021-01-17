@@ -1,7 +1,8 @@
 # DNS-Sinkhole
 
-Tomer Ben Gigi, username: Tomer.Ben-Gigi
-Etamar Romano, username: Etamar.Romano
+<b>Tomer Ben Gigi</b>, username: Tomer.Ben-Gigi
+
+<b>Etamar Romano</b>, username: Etamar.Romano
 
 <code>SinkholeServer.java</code> - The server's entry point (including main function)
 
