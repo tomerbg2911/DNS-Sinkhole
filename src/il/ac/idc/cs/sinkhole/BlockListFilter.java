@@ -30,7 +30,7 @@ public class BlockListFilter {
             }
             myReader.close();
         } catch (FileNotFoundException e) {
-            System.err.printf("An error occurred. File %s not found", path);
+            System.err.printf("An error occurred while loading the block list file. File %s not found\n", path);
         }
     }
 

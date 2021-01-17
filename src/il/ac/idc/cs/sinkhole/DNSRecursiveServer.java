@@ -23,8 +23,7 @@ public class DNSRecursiveServer {
             this.clientSocket = new DatagramSocket();
             this.serverSocket = new DatagramSocket(serverPortNumber);
         } catch (SocketException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            System.err.printf("error occurred while trying to open a new socket: %s\n", e);
         }
         this.blockListFilter = null;
     }
@@ -117,22 +116,23 @@ public class DNSRecursiveServer {
                 }
 
             } catch (UnknownHostException e) {
-                System.err.printf("an Unknown Host Exception occurred during the iterative process");
+                System.err.printf("an Unknown Host Exception occurred during the iterative process: %s\n", e);
             } catch (IOException e) {
-                System.err.printf("IO error occurred during the iterative process");
+                System.err.printf("IO error occurred during the iterative process: %s\n", e);
             } finally {
                 countIterations++;
             }
         }
     }
 
+    
     private DatagramPacket receivePacketFromClient() {
         byte[] DataBuffer = new byte[bufferSizeInBytes];
         DatagramPacket ClientPacket = new DatagramPacket(DataBuffer, DataBuffer.length);
         try {
             this.serverSocket.receive(ClientPacket);
         } catch (IOException e) {
-            System.err.printf("IO error occurred while trying to receive a DatagramPacket from client");
+            System.err.printf("IO error occurred while trying to receive a DatagramPacket from client: %s\n", e);
         }
         return ClientPacket;
     }
