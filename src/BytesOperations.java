@@ -1,5 +1,5 @@
 
-public class BytesHelper {
+public class BytesOperations {
     public static int getBitsSeqFromByte(byte inputByte, int position, int amount) {
         int andMask = 0;
         for (int i = 0; i < amount; i++) {
@@ -30,7 +30,7 @@ public class BytesHelper {
         int result = 0;
         for (byte b : arr) {
             result = result << 8;
-            result += b;
+            result += (int)b & 0xff; // treating the byte as unsigned
         }
         return result;
     }
