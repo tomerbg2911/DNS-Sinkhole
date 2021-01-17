@@ -5,7 +5,7 @@ public class DNSQuery {
 
     // flags
     private int isResponseFlag;
-    private int authorativeAnswerFlag;
+    private int authorityAnswerFlag;
     private int recursionAvailableFlag;
     private int recursionDesiredFlag;
     private int returnCodeFlag;
@@ -13,7 +13,7 @@ public class DNSQuery {
     // counters
     private int questionsCounter;
     private int answersCounter;
-    private int authorativeCounter;
+    private int authorityCounter;
 
     // Question Section
     private Question question;
@@ -61,13 +61,13 @@ public class DNSQuery {
     }
 
     private void analyzeRRsSection() {
-        // read RRs (answer + authoritative) sections
+        // read RRs (answer + authority) sections
         if (this.answersCounter > 0) {
             this.answerRRs = new ResourceRecord[this.answersCounter];
             initRRArray(this.answerRRs);
         }
-        if (this.authorativeCounter > 0) {
-            this.authorityRRs = new ResourceRecord[this.authorativeCounter];
+        if (this.authorityCounter > 0) {
+            this.authorityRRs = new ResourceRecord[this.authorityCounter];
             initRRArray(this.authorityRRs);
         }
     }
@@ -100,7 +100,7 @@ public class DNSQuery {
 
     private void initFlags() {
         this.isResponseFlag = BytesOperations.getBitsSeqFromByte(this.dnsQueryBytes[2], 0, 1);
-        this.authorativeAnswerFlag = BytesOperations.getBitsSeqFromByte(this.dnsQueryBytes[2], 5, 1);
+        this.authorityAnswerFlag = BytesOperations.getBitsSeqFromByte(this.dnsQueryBytes[2], 5, 1);
         this.recursionDesiredFlag = BytesOperations.getBitsSeqFromByte(this.dnsQueryBytes[2], 7, 1);
         this.recursionAvailableFlag = BytesOperations.getBitsSeqFromByte(this.dnsQueryBytes[3], 0, 1);
         this.returnCodeFlag = BytesOperations.getBitsSeqFromByte(this.dnsQueryBytes[3], 4, 4);
@@ -110,12 +110,12 @@ public class DNSQuery {
         // get relevant bytes
         byte[] questionBytes = { dnsQueryBytes[4], dnsQueryBytes[5] };
         byte[] answerBytes = { dnsQueryBytes[6], dnsQueryBytes[7] };
-        byte[] authorativeBytes = { dnsQueryBytes[8], dnsQueryBytes[9] };
+        byte[] authorityBytes = { dnsQueryBytes[8], dnsQueryBytes[9] };
 
         // extract int values from bytes
         this.questionsCounter = BytesOperations.getNumberFromBytesArray(questionBytes);
         this.answersCounter = BytesOperations.getNumberFromBytesArray(answerBytes);
-        this.authorativeCounter = BytesOperations.getNumberFromBytesArray(authorativeBytes);
+        this.authorityCounter = BytesOperations.getNumberFromBytesArray(authorityBytes);
     }
 
     private String readNameFromByte(int startingByteIdx, boolean advanceCursor) {
@@ -173,8 +173,8 @@ public class DNSQuery {
         return this.answersCounter;
     }
 
-    public int getAuthorativeCounter() {
-        return this.authorativeCounter;
+    public int getAuthorityCounter() {
+        return this.authorityCounter;
     }
 
     public int getReturnCodeFlag() {
@@ -185,7 +185,7 @@ public class DNSQuery {
         return this.answerRRs[idx];
     }
 
-    public ResourceRecord getAuthoratyRR(int idx) {
+    public ResourceRecord getAuthorityRR(int idx) {
         return this.authorityRRs[idx];
     }
 
@@ -208,7 +208,7 @@ public class DNSQuery {
                 setDnsQueryByte(3, newByte);
                 break;
             case "AA":
-                this.authorativeAnswerFlag = value;
+                this.authorityAnswerFlag = value;
                 newByte = BytesOperations.setBitsSeqOnByte(this.dnsQueryBytes[2], 5, 1, value);
                 setDnsQueryByte(2, newByte);
                 break;

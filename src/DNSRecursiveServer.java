@@ -72,9 +72,9 @@ public class DNSRecursiveServer {
                             finalResponseFound = true;
                         }
 
-                        // check if the response includes authoritative answers
-                        else if (responseDNSQuery.getAuthorativeCounter() > 0) {
-                            ResourceRecord rr = responseDNSQuery.getAuthoratyRR(0); // get the first entity on AUTHORITY
+                        // check if the response includes authority answers
+                        else if (responseDNSQuery.getAuthorityCounter() > 0) {
+                            ResourceRecord rr = responseDNSQuery.getAuthorityRR(0); // get the first entity on AUTHORITY
                                                                                     // section
                             nameServer = rr.getRDData();
                         }
